@@ -27,6 +27,32 @@ Your value on top of that baseline:
 3. For each discovered endpoint, record: method, path template, parameters (name + `location`: `path`/`query`/`body`/`header`/`cookie`), observed auth requirement (did an unauthenticated request 401/403, or 200?), observed status/content-type.
 4. Classify each endpoint by likely test class for routing purposes (see `CLAUDE.md` routing table): a query/body param whose *value* flows into a lookup/filter → injection candidate; **any parameter — path, query, or body — that identifies an object or resource (an `id`-shaped value, a username, an order number) → access-control candidate, regardless of location.** Location tells you *how* to test it (path params get segment-swapped, query/body params get value-swapped), not *whether* it's an object reference. A query param like `?id=2` is exactly as much an IDOR candidate as a path segment `/orders/2` — don't let `location` alone gate the classification (this was found the hard way: an early version of this agent under-flagged `?id=` params until a live run showed the object-reference nature mattered more than the location). List a parameter under both candidate classes when it plausibly fits both, and let the orchestrator decide — don't silently pick one. This classification is a hint, not a verdict — don't claim a vulnerability exists, you haven't tested for one.
 
+## Evidence logging
+
+Load the `evidence-logging` skill — the common `evidence/evidence.csv`
+schema all five team members' agents write to. Recon doesn't attack, but
+"is this endpoint reachable unauthenticated" is still a testable hypothesis
+worth logging, especially when the answer is surprising (an admin panel
+with no auth check is exactly the kind of thing that should leave a trail,
+not just a table cell). For each auth-requirement probe you send (§Method
+step 3), log one row with `--agent Recon`:
+
+```bash
+MSYS_NO_PATHCONV=1 python scripts/append_evidence.py \
+  --target <base-url> --endpoint "<endpoint>" --agent Recon \
+  --operator <given name> --caller <given mode> \
+  --hypothesis "<e.g. 'does /admin require authentication'>" \
+  --payload "<the unauthenticated probe you sent>" \
+  --observation "<status code / response shape>" \
+  --new-info <yes|no> --status unconfirmed --evidence-ref -
+```
+
+You will be told `operator` and `caller` in your invocation prompt — don't
+guess if you weren't told. Recon findings rarely reach `confirmed` on their
+own (that's the downstream agents' job) — `unconfirmed` with `new_info=yes`
+is the normal, correct status for a recon-logged row; leave promotion to
+`confirmed` to whichever specialist agent actually exploits what you found.
+
 ## Output
 
 Two things, both handed back to the orchestrator:
