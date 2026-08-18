@@ -74,14 +74,22 @@ row before committing.
    `--status confirmed`로 승격 행을 추가한다 (기존 행을 고치지 않고 새 행을
    추가 — CSV는 append-only 로그다). 판단이 애매하면 CVE 담당(박정근)이나
    팀원1에게 크로스체크 요청한 뒤 승격한다.
-5. **커밋 & 상태판 갱신** — 사람 오퍼레이터가 직접 실행 (agent가 git commit을
-   대신 하지 않는다):
+5. **커밋 & 푸시 & 상태판 갱신** — agent가 그 실행에서 추가한 evidence.csv 행을
+   그 실행이 끝나는 시점에 자동으로 커밋·푸시한다 (더 이상 사람이 별도로
+   실행할 필요 없음 — 팀 결정으로 2026-08-18 변경):
    ```bash
    git add evidence/evidence.csv
-   git commit -m "<이름>: <endpoint> <agent> 시도 N건"
+   git commit -m "<agent>: <endpoint> 시도 N건 (operator=<이름 또는 unknown>)"
    git push
    ```
-   그리고 상태판을 성공/실패/막힘으로 갱신한다.
+   - `evidence.csv` **외의 다른 변경**(예: 코드 수정, 다른 파일)은 이 자동 커밋에
+     같이 묶지 않는다 — evidence.csv만 별도로 add한다.
+   - `operator`가 `unknown`으로 남아있으면 커밋 메시지에도 그대로 `unknown`을
+     남긴다 (짐작해서 채우지 않는다) — 사람이 나중에 알아보고 고칠 수 있게.
+   - push가 충돌(비-fast-forward 등)하면 강제 push로 남의 커밋을 덮어쓰지 않는다
+     — `git pull --rebase` 후 재시도하거나, 안 되면 사람에게 보고하고 멈춘다.
+   - 그리고 상태판을 성공/실패/막힘으로 갱신한다 (상태판 자동화는 아직 범위 밖 —
+     `evidence/README.md`의 "상태판" 절 참고).
 6. **오케스트레이터 호출 시점** — 팀원1이 `python scripts/confirmed_summary.py`로
    confirmed 행만 모아 오케스트레이터 세션에 전달한다. unconfirmed/dead-end는
    원본 CSV에 남지만 이 요약에는 들어가지 않는다.
