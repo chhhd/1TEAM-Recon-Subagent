@@ -1,6 +1,10 @@
 # recon 실행 결과 (실제 조사 대상에 대한 민감할 수 있는 데이터) — 커밋하지 않음
 recon-output/
 
+# evidence.csv에서 날짜별로 뽑아낸 파생 산출물(scripts/export_by_date.py) —
+# evidence.csv가 유일한 진실 소스이므로 이 재생성 가능한 사본은 커밋하지 않음
+evidence/evidence_*.csv
+
 # Python 바이트코드 캐시 (lab-target 실행 시 생성됨)
 __pycache__/
 *.pyc
